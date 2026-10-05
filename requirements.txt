@@ -1,0 +1,6 @@
+datasets>=3.0,<5
+sentence-transformers>=3.0,<6
+torch>=2.2
+urllib3<2
+tqdm>=4.66
+rank-bm25>=0.2.2,<1

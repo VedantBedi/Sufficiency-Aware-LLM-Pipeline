@@ -1,3 +1,7 @@
 /data/cache/
 /data/papers_json/
 /data/manifests/
+/data/classifier/
+/models/
+__pycache__/
+*.py[cod]

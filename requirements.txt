@@ -4,3 +4,6 @@ torch>=2.2
 urllib3<2
 tqdm>=4.66
 rank-bm25>=0.2.2,<1
+transformers>=4.45,<5
+peft>=0.13,<1
+accelerate>=1.0,<2

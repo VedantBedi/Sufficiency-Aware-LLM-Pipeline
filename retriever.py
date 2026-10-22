@@ -69,6 +69,7 @@ class HybridRetriever:
         self.data_path = Path(data_path).expanduser().resolve()
         self.split = split
         self.paragraphs: list[dict[str, Any]] = []
+        self.paper_indices: dict[str, list[int]] = {}
         self._load_corpus()
 
         kwargs: dict[str, Any] = {"cache_folder": str(MODEL_CACHE)}
@@ -119,6 +120,7 @@ class HybridRetriever:
                 )
             blocks.append(embeddings)
             for p in paragraphs:
+                index = len(self.paragraphs)
                 self.paragraphs.append(
                     {
                         "paper_id": paper_id,
@@ -127,6 +129,7 @@ class HybridRetriever:
                         "content": p["content"],
                     }
                 )
+                self.paper_indices.setdefault(paper_id, []).append(index)
                 tokenized.append(_tokenize(p["content"]))
 
         self.embeddings = _l2_normalize(np.vstack(blocks))
@@ -142,8 +145,19 @@ class HybridRetriever:
         )
         return vector.astype(np.float32)
 
-    def retrieve(self, query: str, k: int = 5, alpha: float = 0.7) -> list[dict[str, Any]]:
-        """Return the top-k paragraphs across the whole split, best first."""
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        alpha: float = 0.7,
+        paper_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return top-k paragraphs, optionally restricted to one paper.
+
+        QASPER questions are about a single paper. Pass ``paper_id`` when
+        building classifier examples or running sufficiency checks so evidence
+        from another paper can never make a question appear answerable.
+        """
         query = query.strip()
         if not query:
             raise ValueError("query must not be empty")
@@ -155,8 +169,16 @@ class HybridRetriever:
         if not tokens:
             raise ValueError("query must contain at least one letter or number")
 
-        dense = self.embeddings @ self._encode_query(query)
-        bm25 = np.asarray(self.bm25.get_scores(tokens), dtype=np.float32)
+        if paper_id is None:
+            indices = np.arange(len(self.paragraphs))
+        else:
+            indices = np.asarray(self.paper_indices.get(str(paper_id), []), dtype=np.int64)
+            if not len(indices):
+                raise KeyError(f"paper_id {paper_id!r} is not present in this retriever's corpus")
+
+        dense = self.embeddings[indices] @ self._encode_query(query)
+        all_bm25 = np.asarray(self.bm25.get_scores(tokens), dtype=np.float32)
+        bm25 = all_bm25[indices]
         scores = alpha * _minmax(dense) + (1.0 - alpha) * _minmax(bm25)
 
         k = min(k, len(scores))
@@ -166,7 +188,7 @@ class HybridRetriever:
         return [
             {
                 "rank": rank,
-                **self.paragraphs[int(i)],
+                **self.paragraphs[int(indices[i])],
                 "score": float(scores[i]),
                 "dense_score": float(dense[i]),
                 "bm25_score": float(bm25[i]),

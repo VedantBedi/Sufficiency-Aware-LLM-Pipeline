@@ -65,7 +65,7 @@ The application loads `GEMINI_API_KEY` and `GEMINI_MODEL` from the project-root
 `.env` file. `.env` is ignored by Git; do not commit your API key. The
 `--gemini-model` command-line option can override the model from `.env`.
 
-The first round retrieves the top `--initial-k` paragraphs across the split (default 5). If Gemini labels the context `INCOMPLETE`, the pipeline increases `k` and retries the original query. For the third round, Gemini also identifies the missing evidence and suggests up to five short search phrases; the pipeline combines those phrases with the original question, increases `k` again, retrieves, and classifies once more. The search phrases are derived from the question and retrieved passages, and are treated only as retrieval hints. The pipeline stops after three classification rounds:
+The first round retrieves the top `--initial-k` paragraphs across the split (default 5). If Gemini labels the context `INCOMPLETE`, the pipeline increases `k` and retries the original query. If the second result is also `INCOMPLETE`, Gemini expands the original query using the previous round's retrieved evidence; the pipeline increases `k` again and uses the expanded query for the third and final retrieval. The classifier returns only one label. The pipeline stops after three classification rounds:
 
 - `SUFFICIENT`: Gemini answers using only the retrieved context and cites paragraph IDs.
 - `NOT SUFFICIENT`: immediately replies, “Not enough context to answer the question.”

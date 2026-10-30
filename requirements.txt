@@ -7,3 +7,5 @@ rank-bm25>=0.2.2,<1
 transformers>=4.45,<5
 peft>=0.13,<1
 accelerate>=1.0,<2
+google-genai>=1.0,<2
+python-dotenv>=1.0,<2

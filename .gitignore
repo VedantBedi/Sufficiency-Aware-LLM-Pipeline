@@ -3,5 +3,6 @@
 /data/manifests/
 /data/classifier/
 /models/
+.env
 __pycache__/
 *.py[cod]
